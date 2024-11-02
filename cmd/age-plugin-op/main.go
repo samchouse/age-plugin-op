@@ -4,14 +4,15 @@ import (
 	"bufio"
 	"bytes"
 	"encoding/base64"
-	"filippo.io/age"
 	"fmt"
-	"github.com/bromanko/age-plugin-op/plugin"
-	"github.com/spf13/cobra"
 	"io"
 	"log"
 	"os"
 	"strconv"
+
+	"filippo.io/age"
+	"github.com/bromanko/age-plugin-op/plugin"
+	"github.com/spf13/cobra"
 )
 
 type PluginOptions struct {

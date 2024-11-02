@@ -4,14 +4,17 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"encoding/binary"
+	"fmt"
+	"strings"
+
 	"filippo.io/age"
 	"filippo.io/age/agessh"
 	"filippo.io/age/plugin"
-	"fmt"
 )
 
 type OpRecipient struct {
 	privateKeyPath string
+	user           string
 	tag            []byte
 }
 
@@ -27,20 +30,22 @@ func (r *OpRecipient) String() string {
 	return EncodeRecipient(r)
 }
 
-func NewRecipient(opPath string) *OpRecipient {
+func NewRecipient(user, opPath string) *OpRecipient {
 	sum := sha256.Sum256([]byte(opPath))
 	return &OpRecipient{
 		privateKeyPath: opPath,
+		user:           user,
 		tag:            sum[:4],
 	}
 }
 
 func (r *OpRecipient) Identity() *OpIdentity {
-	return NewOpIdentity(r.privateKeyPath)
+	i, _ := NewOpIdentity(r.privateKeyPath, r.user)
+	return i
 }
 
 func (r *OpRecipient) Wrap(fileKey []byte) ([]*age.Stanza, error) {
-	pkey, err := ReadKeyOp(r.privateKeyPath)
+	pkey, err := ReadKeyOp(r.privateKeyPath, r.user)
 	if err != nil {
 		return nil, err
 	}
@@ -60,7 +65,7 @@ func (r *OpRecipient) Wrap(fileKey []byte) ([]*age.Stanza, error) {
 
 func EncodeRecipient(r *OpRecipient) string {
 	var b bytes.Buffer
-	err := binary.Write(&b, binary.BigEndian, []byte(r.privateKeyPath))
+	err := binary.Write(&b, binary.BigEndian, []byte(r.user+"=="+r.privateKeyPath))
 	if err != nil {
 		Log.Println("failed to encode recipient: %v", err)
 	}
@@ -76,5 +81,9 @@ func DecodeRecipient(s string) (*OpRecipient, error) {
 		return nil, fmt.Errorf("invalid plugin for type %s", name)
 	}
 
-	return NewRecipient(string(b)), nil
+	splits := strings.Split(string(b), "==")
+	if len(splits) != 2 {
+		return nil, fmt.Errorf("failed to decode recipient data: missing parts")
+	}
+	return NewRecipient(splits[0], splits[1]), nil
 }

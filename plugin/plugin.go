@@ -3,9 +3,10 @@ package plugin
 import (
 	"bytes"
 	"encoding/binary"
-	"filippo.io/age/plugin"
 	"fmt"
 	"strings"
+
+	"filippo.io/age/plugin"
 )
 
 const (
@@ -15,12 +16,15 @@ const (
 // CreateIdentity creates a new identity.
 // Returns the identity and the corresponding recipient.
 func CreateIdentity(privateKeyPath string) (*OpIdentity, error) {
-	_, err := ReadKeyOp(privateKeyPath)
+	_, err := ReadKeyOp(privateKeyPath, "")
 	if err != nil {
 		return nil, err
 	}
 
-	identity := NewOpIdentity(privateKeyPath)
+	identity, err := NewOpIdentity(privateKeyPath, "")
+	if err != nil {
+		return nil, err
+	}
 
 	return identity, nil
 }
@@ -41,7 +45,13 @@ func DecodeIdentity(s string) (*OpIdentity, error) {
 		}
 	}
 
-	key.privateKeyPath = strings.TrimPrefix(string(b), "\x01")
+	splits := strings.Split(strings.TrimPrefix(string(b), "\x01"), "==")
+	if len(splits) != 2 {
+		return nil, fmt.Errorf("failed to decode recipient data: missing parts")
+	}
+
+	key.user = splits[0]
+	key.privateKeyPath = splits[1]
 
 	return &key, nil
 }

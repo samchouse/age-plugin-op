@@ -3,19 +3,22 @@ package plugin
 import (
 	"bytes"
 	"encoding/binary"
+	"fmt"
+	"io"
+	"os/user"
+	"strings"
+	"time"
+
 	"filippo.io/age"
 	"filippo.io/age/agessh"
 	"filippo.io/age/plugin"
-	"fmt"
-	"io"
-	"strings"
-	"time"
 )
 
 const version = 1
 
 type OpIdentity struct {
 	Version        uint8
+	user           string
 	privateKeyPath string
 }
 
@@ -28,7 +31,7 @@ func (i *OpIdentity) serialize() []any {
 }
 
 func (i *OpIdentity) Unwrap(stanzas []*age.Stanza) ([]byte, error) {
-	pkey, err := ReadKeyOp(i.privateKeyPath)
+	pkey, err := ReadKeyOp(i.privateKeyPath, i.user)
 	if err != nil {
 		return nil, err
 	}
@@ -47,16 +50,26 @@ func (i *OpIdentity) Unwrap(stanzas []*age.Stanza) ([]byte, error) {
 	}
 }
 
-func NewOpIdentity(privateKeyPath string) *OpIdentity {
+func NewOpIdentity(privateKeyPath, usr string) (*OpIdentity, error) {
+	if usr == "" {
+		user, err := user.Current()
+		if err != nil {
+			return nil, err
+		}
+
+		usr = user.Username
+	}
+
 	i := &OpIdentity{
 		Version:        version,
+		user:           usr,
 		privateKeyPath: privateKeyPath,
 	}
-	return i
+	return i, nil
 }
 
 func (i *OpIdentity) Recipient() *OpRecipient {
-	return NewRecipient(i.privateKeyPath)
+	return NewRecipient(i.user, i.privateKeyPath)
 }
 
 func encodeIdentity(i *OpIdentity) string {
@@ -65,7 +78,7 @@ func encodeIdentity(i *OpIdentity) string {
 		_ = binary.Write(&b, binary.BigEndian, v)
 	}
 
-	err := binary.Write(&b, binary.BigEndian, []byte(i.privateKeyPath))
+	err := binary.Write(&b, binary.BigEndian, []byte(i.user+"=="+i.privateKeyPath))
 	if err != nil {
 		Log.Printf("failed to encode identity: %v", err)
 	}
