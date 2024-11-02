@@ -14,7 +14,7 @@ import (
 	"filippo.io/age/plugin"
 )
 
-const version = 1
+const version = 2
 
 type OpIdentity struct {
 	Version        uint8

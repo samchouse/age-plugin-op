@@ -7,12 +7,18 @@ import (
 	"os/exec"
 	"os/user"
 	"strconv"
+	"strings"
 	"syscall"
 )
 
 func ReadKeyOp(privateKeyPath, usr string) ([]byte, error) {
 	cmd := exec.Command("op", "read", privateKeyPath)
-	if usr != "" {
+
+	currentUser, err := user.Current()
+	if err != nil {
+		return nil, fmt.Errorf("could not get current user: %v", err)
+	}
+	if usr != "" && usr != currentUser.Username {
 		user, err := user.Lookup(usr)
 		if err != nil {
 			return nil, fmt.Errorf("could not get user: %v", err)
@@ -34,7 +40,7 @@ func ReadKeyOp(privateKeyPath, usr string) ([]byte, error) {
 
 		env := []string{}
 		for _, e := range os.Environ() {
-			if !(e[:5] == "HOME=" || e[:5] == "USER=" || e[:8] == "LOGNAME=") {
+			if !(strings.HasPrefix(e, "HOME=") || strings.HasPrefix(e, "USER=") || strings.HasPrefix(e, "LOGNAME=")) {
 				env = append(env, e)
 			}
 		}
