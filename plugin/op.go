@@ -9,9 +9,11 @@ import (
 	"strconv"
 	"strings"
 	"syscall"
+	"unicode"
 )
 
 func ReadKeyOp(privateKeyPath, usr string) ([]byte, error) {
+	usr = cleanString(usr)
 	cmd := exec.Command("op", "read", privateKeyPath)
 
 	currentUser, err := user.Current()
@@ -58,4 +60,11 @@ func ReadKeyOp(privateKeyPath, usr string) ([]byte, error) {
 		return nil, fmt.Errorf("could not read private key from 1Password: %v", err)
 	}
 	return output, nil
+}
+
+func cleanString(s string) string {
+	if len(s) > 0 && unicode.IsControl(rune(s[0])) {
+		return s[1:]
+	}
+	return s
 }
