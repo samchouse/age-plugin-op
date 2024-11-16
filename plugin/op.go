@@ -51,6 +51,12 @@ func ReadKeyOp(privateKeyPath, usr string) ([]byte, error) {
 			"USER="+user.Username,
 			"LOGNAME="+user.Username,
 		)
+
+		// TODO: make this configurable
+		token, err := os.ReadFile("/run/secrets/op_service_token")
+		if err == nil {
+			cmd.Env = append(cmd.Env, "OP_SERVICE_ACCOUNT_TOKEN="+string(token))
+		}
 	}
 
 	var stderr bytes.Buffer
